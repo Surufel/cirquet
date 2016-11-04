@@ -1,6 +1,7 @@
 import Vapor
 
 let drop = Droplet()
+print(drop.workDir)
 
 drop.get { req in
     return try drop.view.make("welcome", [
