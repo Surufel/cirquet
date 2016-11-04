@@ -13,7 +13,7 @@ drop.get("hi") {
     return try drop.view.make("hi.html")
 }
 
-drop.test("test") {
+drop.get("test") {
     request in
     return "hi12345"
 }
