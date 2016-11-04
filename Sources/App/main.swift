@@ -8,6 +8,10 @@ drop.get { req in
     ])
 }
 
+drop.get("hi") {
+    request in
+    return try drop.view.make("hi.html");
+}
 drop.resource("posts", PostController())
 
 drop.run()
