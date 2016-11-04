@@ -13,6 +13,11 @@ drop.get("hi") {
     return try drop.view.make("hi.html")
 }
 
+drop.test("test") {
+    request in
+    return "hi12345"
+}
+
 //drop.resource("posts", PostController())
 
 drop.socket("ws") { req, ws in
