@@ -21,6 +21,9 @@ drop.get("test") {
 
 //drop.resource("posts", PostController())
 
-
+drop.get("test1") {
+    request in
+    return "123456"
+}
 
 drop.run()
