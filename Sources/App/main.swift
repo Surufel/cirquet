@@ -25,5 +25,9 @@ drop.get("test1") {
     request in
     return "123456"
 }
+drop.get ("12345") {
+    request in
+    return "hi1"
+}
 
 drop.run()
