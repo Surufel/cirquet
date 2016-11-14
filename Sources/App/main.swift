@@ -56,6 +56,11 @@ drop.socket("ws") { req, ws in
     }
 }
 
+drop.get("hi1234") {
+    request in
+    return "abc12345"
+}
+
 drop.post("register") {
     request in
     return (request.parameters["fullName"]?.string)!;
