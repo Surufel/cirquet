@@ -63,8 +63,8 @@ drop.get("hi1234") {
 
 drop.post("register") {
     request in
-    //return (request.parameters["fullName"]?.string)!;
-    return "hi!";
+    return (request.parameters["fullName"]?.string)!;
+    //return "hi!";
 }
 
 
