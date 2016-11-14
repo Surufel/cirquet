@@ -56,5 +56,10 @@ drop.socket("ws") { req, ws in
     }
 }
 
+drop.post("register") {
+    request in
+    return request.parameters["fullName"]?.string;
+}
+
 
 drop.run()
