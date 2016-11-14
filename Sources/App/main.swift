@@ -16,21 +16,10 @@ drop.get("hi") {
     return try drop.view.make("hi.html")
 }
 
-drop.get("test") {
-    request in
-    return "hi12345"
-}
 
 //drop.resource("posts", PostController())
 
-drop.get("test1") {
-    request in
-    return "123456"
-}
-drop.get ("12345") {
-    request in
-    return "hi1"
-}
+
 
 drop.socket("ws") { req, ws in
     print("New WebSocket connected: \(ws)")
@@ -56,15 +45,12 @@ drop.socket("ws") { req, ws in
     }
 }
 
-drop.get("hi1234") {
-    request in
-    return "abc12345"
-}
+
 
 drop.post("register") {
     request in
-    return (request.parameters["fullName"]?.string)!;
-    //return "hi!";
+    let name = request.data["fullName"]?.string!
+    return name!;
 }
 
 
