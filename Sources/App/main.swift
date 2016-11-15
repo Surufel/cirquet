@@ -1,4 +1,5 @@
 import Vapor
+//probably import chat file
 //import VaporPostgreSQL
 
 
@@ -52,6 +53,9 @@ drop.post("register") {
     let name = request.data["fullName"]?.string!
     return name!;
 }
+
+
+// chat functions here
 
 
 drop.run()
