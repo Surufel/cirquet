@@ -3,8 +3,11 @@ import Vapor
 import VaporPostgreSQL
 
 
-let drop = Droplet()
-try drop.addProvider(VaporPostgreSQL.Provider.self);
+
+let drop = Droplet(
+    preparations: [User.self],
+    providers: [VaporPostgreSQL.Provider.self]
+)
 
 drop.get { req in
     return try drop.view.make("welcome", [
@@ -22,39 +25,43 @@ drop.get("hi") {
 
 
 
-drop.socket("ws") { req, ws in
-    print("New WebSocket connected: \(ws)")
-    
-    // ping the socket to keep it open
-    try background {
-        while ws.state == .open {
-            try? ws.ping()
-            drop.console.wait(seconds: 10) // every 10 seconds
-        }
-    }
-    
-    ws.onText = { ws, text in
-        print("Text received: \(text)")
-        
-        // reverse the characters and send back
-        let rev = String(text.characters.reversed())
-        try ws.send(rev)
-    }
-    
-    ws.onClose = { ws, code, reason, clean in
-        print("Closed.")
-    }
-}
+//drop.socket("ws") { req, ws in
+//    print("New WebSocket connected: \(ws)")
+//    
+//    // ping the socket to keep it open
+//    try background {
+//        while ws.state == .open {
+//            try? ws.ping()
+//            drop.console.wait(seconds: 10) // every 10 seconds
+//        }
+//    }
+//    
+//    ws.onText = { ws, text in
+//        print("Text received: \(text)")
+//        
+//        // reverse the characters and send back
+//        let rev = String(text.characters.reversed())
+//        try ws.send(rev)
+//    }
+//    
+//    ws.onClose = { ws, code, reason, clean in
+//        print("Closed.")
+//    }
+//}
 
 
 
 drop.post("register") {
     request in
-    let name = request.data["fullName"]?.string!
-    return name!;
+    let fname = request.data["fname"]?.string!
+    let lname = request.data["lname"]?.string!
+    let email = request.data["email"]?.string!
+    let age = request.data["age"]?.int!
+    let host = request.data["host"]?.bool!
+    let googleID = request.data["googleID"]?.string!
+    return try JSON(node: User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleID: googleID!).makeNode())
+
 }
-
-
 // chat functions here
 
 
