@@ -59,7 +59,9 @@ drop.post("register") {
     let age = request.data["age"]?.int!
     let host = request.data["host"]?.bool!
     let googleID = request.data["googleID"]?.string!
-    return try JSON(node: User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleID: googleID!).makeNode())
+    var u = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleID: googleID!)
+    try u.save()
+    return try JSON(node: User.all().makeNode())
 
 }
 // chat functions here
