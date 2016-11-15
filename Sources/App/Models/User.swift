@@ -11,21 +11,22 @@ import Vapor
 
 final class User: Model {
     var id: Node?
+    var exists: Bool = false
     var fname: String
     var lname: String
     var email: String
     var age: Int
     var host: Bool
-    var googleID: String
+    var googleid: String
     
-    init(fname: String, lname: String, email: String, age: Int, host: Bool, googleID: String) {
+    init(fname: String, lname: String, email: String, age: Int, host: Bool, googleid: String) {
         self.id = nil
         self.fname = fname
         self.lname = lname
         self.email = email
         self.age = age
         self.host = host
-        self.googleID = googleID
+        self.googleid = googleid
     }
     
     init(node: Node, in context: Context) throws {
@@ -35,7 +36,7 @@ final class User: Model {
         self.email = try node.extract("email")
         self.age = try node.extract("age")
         self.host = try node.extract("host")
-        self.googleID = try node.extract("googleID")
+        self.googleid = try node.extract("googleid")
     }
     
     func makeNode(context: Context) throws -> Node {
@@ -46,7 +47,7 @@ final class User: Model {
             "email": self.email,
             "age": self.age,
             "host": self.host,
-            "googleID": self.googleID
+            "googleid": self.googleid
             ])
     }
     
@@ -59,7 +60,7 @@ final class User: Model {
             users.string("email")
             users.int("age")
             users.bool("host")
-            users.string("googleID")
+            users.string("googleid")
         }
     }
     

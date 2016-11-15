@@ -58,8 +58,8 @@ drop.post("register") {
     let email = request.data["email"]?.string!
     let age = request.data["age"]?.int!
     let host = request.data["host"]?.bool!
-    let googleID = request.data["googleID"]?.string!
-    var u = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleID: googleID!)
+    let googleid = request.data["googleid"]?.string!
+    var u = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: googleid!)
     try u.save()
     return try JSON(node: User.all().makeNode())
 
