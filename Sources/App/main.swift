@@ -1,3 +1,4 @@
+import Foundation
 import Vapor
 //probably import chat file
 import VaporPostgreSQL
@@ -5,7 +6,7 @@ import VaporPostgreSQL
 
 
 let drop = Droplet(
-    preparations: [User.self],
+    preparations: [User.self, Message.self],
     providers: [VaporPostgreSQL.Provider.self]
 )
 
@@ -63,6 +64,18 @@ drop.post("register") {
     try u.save()
     return try JSON(node: User.all().makeNode())
 
+}
+
+drop.post("message") {
+    request in
+    let msg = request.data["msg"]?.string!
+    let date = request.data["date"]?.string!
+    let id = request.data["id"]?.int!
+    let chat = request.data["chat"]?.string!
+    var m = Message(contents: msg!, owner: id!, date: date!, chat: chat!)
+    try m.save()
+    return try JSON(node: Message.all().makeNode())
+    
 }
 // chat functions here
 
