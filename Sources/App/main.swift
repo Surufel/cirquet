@@ -5,20 +5,20 @@ import VaporPostgreSQL
 
 
 
-let drop = Droplet(
+let socket = Droplet(
     preparations: [User.self, Message.self],
     providers: [VaporPostgreSQL.Provider.self]
 )
 
-drop.get { req in
-    return try drop.view.make("welcome", [
-    	"message": drop.localization[req.lang, "welcome", "title"]
+socket.get { req in
+    return try socket.view.make("welcome", [
+    	"message": socket.localization[req.lang, "welcome", "title"]
     ])
 }
 
-drop.get("hi") {
+socket.get("hi") {
     request in
-    return try drop.view.make("hi.html")
+    return try socket.view.make("hi.html")
 }
 
 
@@ -26,33 +26,33 @@ drop.get("hi") {
 
 
 
-//drop.socket("ws") { req, ws in
-//    print("New WebSocket connected: \(ws)")
-//    
-//    // ping the socket to keep it open
-//    try background {
-//        while ws.state == .open {
-//            try? ws.ping()
-//            drop.console.wait(seconds: 10) // every 10 seconds
-//        }
-//    }
-//    
-//    ws.onText = { ws, text in
-//        print("Text received: \(text)")
-//        
-//        // reverse the characters and send back
-//        let rev = String(text.characters.reversed())
-//        try ws.send(rev)
-//    }
-//    
-//    ws.onClose = { ws, code, reason, clean in
-//        print("Closed.")
-//    }
-//}
+socket.socket("ws") { req, ws in
+    print("New WebSocket connected: \(ws)")
+    
+    // ping the socket to keep it open
+    try background {
+        while ws.state == .open {
+            try? ws.ping()
+            socket.console.wait(seconds: 10) // every 10 seconds
+        }
+    }
+    
+    ws.onText = { ws, text in
+        print("Text received: \(text)")
+        
+        // reverse the characters and send back
+        let rev = String(text.characters.reversed())
+        try ws.send(rev)
+    }
+    
+    ws.onClose = { ws, code, reason, clean in
+        print("Closed.")
+    }
+}
 
 
 
-drop.post("register") {
+socket.post("register") {
     request in
     let fname = request.data["fname"]?.string!
     let lname = request.data["lname"]?.string!
@@ -62,11 +62,13 @@ drop.post("register") {
     let googleid = request.data["googleid"]?.string!
     var u = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: googleid!)
     try u.save()
-    return try JSON(node: User.all().makeNode())
+    if u.exists {return String(true)}
+    else {return String(false)}
+    
 
 }
 
-drop.post("message") {
+socket.post("message") {
     request in
     let msg = request.data["msg"]?.string!
     let date = request.data["date"]?.string!
@@ -80,4 +82,4 @@ drop.post("message") {
 // chat functions here
 
 
-drop.run()
+socket.run()
