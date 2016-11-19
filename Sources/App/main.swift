@@ -60,10 +60,10 @@ socket.post("register") {
     let age = request.data["age"]?.int!
     let host = request.data["host"]?.bool!
     let googleid = request.data["googleid"]?.string!
-    var u = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: googleid!)
+    let date = Double((request.data["date"]?.string!)!)
+    var u = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: googleid!, signupdate: date!)
     try u.save()
-    if u.exists {return String(true)}
-    else {return String(false)}
+    return "ok"
     
 
 }
