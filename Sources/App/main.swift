@@ -2,6 +2,7 @@ import Foundation
 import Vapor
 //probably import chat file
 import VaporPostgreSQL
+import Auth
 
 
 
@@ -61,10 +62,14 @@ socket.post("register") {
     let host = request.data["host"]?.bool!
     let googleid = request.data["googleid"]?.string!
     let date = Double((request.data["date"]?.string!)!)
-    var u = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: googleid!, signupdate: date!)
-    try u.save()
+    var creds = [fname!, lname!, email!, age!, host!, googleid!, date!] as [Any]
+    guard let u = try User.authenticate(credentials: creds as! Credentials) else {
+        try User.register(credentials: creds as! Credentials)
+    }
+    //var u = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: googleid!, signupdate: date!)
+    //try u.save()
     return "ok"
-    
+
 
 }
 
