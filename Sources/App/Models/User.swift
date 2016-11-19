@@ -73,38 +73,39 @@ final class User: Model {
     static func revert(_ database: Database) throws {
         try database.delete("users")
     }
+    
 }
 
-extension User: Auth.User {
-    static func authenticate (credentials: Credentials) throws -> Auth.User {
-        switch credentials {
-        case let accessToken as AccessToken:
-            guard let user = try User.query().filter("googleid", accessToken.string).first() else {
-                throw Abort.custom(status: .forbidden, message: "Invalid google id")
-            }
-            return user
-        default:
-            let type = type(of: credentials)
-            throw Abort.custom(status: .forbidden, message: "Invalid type: \(type)")
-        }
-        
-    }
-    static func register (credentials: Credentials) throws -> Auth.User {
-        switch credentials {
-        case let accessToken as AccessToken:
-            guard (try User.query().filter("googleid", accessToken.string).first()) != nil else {
-                fallthrough
-            }
-            throw Abort.custom(status: .badRequest, message: "User already exists")
-            
-        default:
-            var c = credentials as! [String]
-            var us = User(fname: c[0], lname: c[1], email: c[2], age: Int(c[3])!, host: Bool(c[4])!, googleid: c[5], signupdate: Double(c[6])!)
-            try us.save()
-            return us
-        }
-    }
-}
+//extension User: Auth.User {
+//    static func authenticate (credentials: Credentials) throws -> Auth.User {
+//        switch credentials {
+//        case let accessToken as AccessToken:
+//            guard let user = try User.query().filter("googleid", accessToken.string).first() else {
+//                throw Abort.custom(status: .forbidden, message: "Invalid google id")
+//            }
+//            return user
+//        default:
+//            let type = type(of: credentials)
+//            throw Abort.custom(status: .forbidden, message: "Invalid type: \(type)")
+//        }
+//        
+//    }
+//    static func register (credentials: Credentials) throws -> Auth.User {
+//        switch credentials {
+//        case let accessToken as AccessToken:
+//            guard (try User.query().filter("googleid", accessToken.string).first()) != nil else {
+//                fallthrough
+//            }
+//            throw Abort.custom(status: .badRequest, message: "User already exists")
+//            
+//        default:
+//            var c = credentials as! [String]
+//            var us = User(fname: c[0], lname: c[1], email: c[2], age: Int(c[3])!, host: Bool(c[4])!, googleid: c[5], signupdate: Double(c[6])!)
+//            try us.save()
+//            return us
+//        }
+//    }
+//}
 
 
 

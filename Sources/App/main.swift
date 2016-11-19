@@ -1,6 +1,5 @@
 import Foundation
 import Vapor
-//probably import chat file
 import VaporPostgreSQL
 import Auth
 
@@ -27,31 +26,6 @@ socket.get("hi") {
 
 
 
-socket.socket("ws") { req, ws in
-    print("New WebSocket connected: \(ws)")
-    
-    // ping the socket to keep it open
-    try background {
-        while ws.state == .open {
-            try? ws.ping()
-            socket.console.wait(seconds: 10) // every 10 seconds
-        }
-    }
-    
-    ws.onText = { ws, text in
-        print("Text received: \(text)")
-        
-        // reverse the characters and send back
-        let rev = String(text.characters.reversed())
-        try ws.send(rev)
-    }
-    
-    ws.onClose = { ws, code, reason, clean in
-        print("Closed.")
-    }
-}
-
-
 
 socket.post("register") {
     request in
@@ -62,14 +36,23 @@ socket.post("register") {
     let host = request.data["host"]?.bool!
     let googleid = request.data["googleid"]?.string!
     let date = Double((request.data["date"]?.string!)!)
-    var creds = [fname!, lname!, email!, age!, host!, googleid!, date!] as [Any]
-    guard let u = try User.authenticate(credentials: creds as! Credentials) else {
-        try User.register(credentials: creds as! Credentials)
-    }
-    //var u = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: googleid!, signupdate: date!)
-    //try u.save()
-    return "ok"
+//    var creds = [fname!, lname!, email!, String(age!), String(host!), googleid!, String(date!)] as [String]
+//    var v: AccessToken = AccessToken(string: googleid!)
+//    try _ = User.register(credentials: creds as! Credentials)
+//    do {
+//       try request.auth.login(v)
+//        print("login")
+//        return try JSON(node: [
+//            "success": true
+//            ])
+//    } catch _ {
+//        throw Abort.custom(status: .badRequest, message: "invalid google id")
+//    }
 
+    var u = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: googleid!, signupdate: date!)
+    try u.save()
+    return "ok"
+   
 
 }
 
@@ -85,6 +68,33 @@ socket.post("message") {
     
 }
 // chat functions here
+let chat = Chat()
+
+
+socket.socket("ws") { req, ws in
+    var name: String? = nil
+    
+    ws.onText = {
+        ws, text in
+        let js = try JSON(bytes: Array(text.utf8))
+        if let u = js.object?["username"]?.string {
+            name = u
+            chat.conns[u] = ws
+            try chat.bot("\(u) has joined")
+        }
+        if let u = name, let m = js.object?["message"]?.string {
+            try chat.send(name: u, message: m)
+        }
+    }
+    ws.onClose = {
+        ws, _, _, _ in
+        guard let u = name else {
+            return
+        }
+        try chat.bot("\(u) has left")
+        chat.conns.removeValue(forKey: u)
+    }
+}
 
 
 socket.run()
