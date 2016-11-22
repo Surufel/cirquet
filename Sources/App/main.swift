@@ -2,7 +2,7 @@ import Foundation
 import Vapor
 import VaporPostgreSQL
 import Auth
-import Just
+import HTTP
 
 
 
@@ -24,16 +24,19 @@ socket.post("register") {
     let googleid = request.data["googleid"]?.string!
     let date = Double((request.data["date"]?.string!)!)
     
-    //Initialise the session defaults for Just to allow mutable containers for the JSON
-    let def = JustSessionDefaults(JSONReadingOptions: .mutableContainers)
+
     
     //Send a request to google to authenticate the token received from the app
-    let response = Just.post("https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + googleid!)
-    if(response.ok) {
+    var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + String(googleid!)
+    let res = try socket.client.post(str)
+    var sub = res.json?["sub"]?.string!
+    var exp = res.json?["exp"]?.string!
+    
+    
+    if(res.status.statusCode == 200) {
         //If google responds with 200 OK, extract json as dictionary
-        var dict = response.json.extract() as! Dictionary<String, Any?>
-        //Create credentials variable as UserData object
-        var u: User = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: dict["sub"]! as! String, signupdate: date!, tokenexpiry: dict["exp"]! as! String)
+                //Create credentials variable as UserData object
+        var u: User = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: sub!, signupdate: date!, tokenexpiry: exp!)
             //First try register
             do {
                 try _ = User.register(credentials: u)
@@ -57,7 +60,6 @@ socket.post("register") {
 
 // This return will never happen, but Xcode wants it so Xcode is happy :)
     return "ok"
-   
 
 }
 
