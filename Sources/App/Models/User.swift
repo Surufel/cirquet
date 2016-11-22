@@ -10,7 +10,7 @@ import Foundation
 import Vapor
 import Auth
 
-final class User: Model {
+final class User: Model, Credentials {
     var id: Node?
     var exists: Bool = false
     var fname: String
@@ -18,18 +18,20 @@ final class User: Model {
     var email: String
     var age: Int
     var host: Bool
-    var googleid: String
+    var googleid: Double
     var signupdate: Double
+    var tokenexpiry: Double
     
-    init(fname: String, lname: String, email: String, age: Int, host: Bool, googleid: String, signupdate: Double) {
+    init(fname: String, lname: String, email: String, age: Int, host: Bool, googleid: String, signupdate: Double, tokenexpiry: String) {
         self.id = nil
         self.fname = fname
         self.lname = lname
         self.email = email
         self.age = age
         self.host = host
-        self.googleid = googleid
+        self.googleid = Double(googleid)!
         self.signupdate = signupdate
+        self.tokenexpiry = Double(tokenexpiry)!
     }
     
     init(node: Node, in context: Context) throws {
@@ -41,6 +43,7 @@ final class User: Model {
         self.host = try node.extract("host")
         self.googleid = try node.extract("googleid")
         self.signupdate = try node.extract("signupdate")
+        self.tokenexpiry = try node.extract("tokenexpiry")
     }
     
     func makeNode(context: Context) throws -> Node {
@@ -52,7 +55,8 @@ final class User: Model {
             "age": self.age,
             "host": self.host,
             "googleid": self.googleid,
-            "signupdate": self.signupdate
+            "signupdate": self.signupdate,
+            "tokenexpiry": self.tokenexpiry
             ])
     }
     
@@ -65,8 +69,9 @@ final class User: Model {
             users.string("email")
             users.int("age")
             users.bool("host")
-            users.string("googleid")
+            users.double("googleid")
             users.double("signupdate")
+            users.double("tokenexpiry")
         }
     }
     
@@ -76,36 +81,42 @@ final class User: Model {
     
 }
 
-//extension User: Auth.User {
-//    static func authenticate (credentials: Credentials) throws -> Auth.User {
-//        switch credentials {
-//        case let accessToken as AccessToken:
-//            guard let user = try User.query().filter("googleid", accessToken.string).first() else {
-//                throw Abort.custom(status: .forbidden, message: "Invalid google id")
-//            }
-//            return user
-//        default:
-//            let type = type(of: credentials)
-//            throw Abort.custom(status: .forbidden, message: "Invalid type: \(type)")
-//        }
-//        
-//    }
-//    static func register (credentials: Credentials) throws -> Auth.User {
-//        switch credentials {
-//        case let accessToken as AccessToken:
-//            guard (try User.query().filter("googleid", accessToken.string).first()) != nil else {
-//                fallthrough
-//            }
-//            throw Abort.custom(status: .badRequest, message: "User already exists")
-//            
-//        default:
-//            var c = credentials as! [String]
-//            var us = User(fname: c[0], lname: c[1], email: c[2], age: Int(c[3])!, host: Bool(c[4])!, googleid: c[5], signupdate: Double(c[6])!)
-//            try us.save()
-//            return us
-//        }
-//    }
-//}
+extension User: Auth.User {
+    static func authenticate (credentials: Credentials) throws -> Auth.User {
+        
+        //Check db if user exists
+        let user = try User.query().filter("googleid", (credentials as! User).googleid).first()
+        
+        if user != nil {
+            // If y != nil we will return user
+            return user!
+        }
+        
+        else {
+            throw Abort.custom(status: .badRequest, message: "User does not exist")
+        }
+
+    }
+    
+    static func register (credentials: Credentials) throws -> Auth.User {
+        
+        // Check db if user exists
+        let user = try User.query().filter("googleid", (credentials as! User).googleid).first()
+        if user != nil {
+            // If user exists, throw abort & main .swift will continue to try to login
+            print("user already exists")
+            throw Abort.custom(status: .badRequest, message: "User already exists")
+            
+        }
+        else {
+            print("register")
+            var us = credentials as! User //Casting credentials back to User class since User conforms to Credentials protocol
+            try us.save() //save user to db
+            return us // return user
+        }
+    }
+    
+}
 
 
 

@@ -2,6 +2,8 @@ import Foundation
 import Vapor
 import VaporPostgreSQL
 import Auth
+import Just
+
 
 
 
@@ -10,25 +12,10 @@ let socket = Droplet(
     providers: [VaporPostgreSQL.Provider.self]
 )
 
-socket.get { req in
-    return try socket.view.make("welcome", [
-    	"message": socket.localization[req.lang, "welcome", "title"]
-    ])
-}
-
-socket.get("hi") {
-    request in
-    return try socket.view.make("hi.html")
-}
-
-
-//drop.resource("posts", PostController())
-
-
-
 
 socket.post("register") {
     request in
+    //Pull in data from the request sent from the app
     let fname = request.data["fname"]?.string!
     let lname = request.data["lname"]?.string!
     let email = request.data["email"]?.string!
@@ -36,21 +23,39 @@ socket.post("register") {
     let host = request.data["host"]?.bool!
     let googleid = request.data["googleid"]?.string!
     let date = Double((request.data["date"]?.string!)!)
-//    var creds = [fname!, lname!, email!, String(age!), String(host!), googleid!, String(date!)] as [String]
-//    var v: AccessToken = AccessToken(string: googleid!)
-//    try _ = User.register(credentials: creds as! Credentials)
-//    do {
-//       try request.auth.login(v)
-//        print("login")
-//        return try JSON(node: [
-//            "success": true
-//            ])
-//    } catch _ {
-//        throw Abort.custom(status: .badRequest, message: "invalid google id")
-//    }
+    
+    //Initialise the session defaults for Just to allow mutable containers for the JSON
+    let def = JustSessionDefaults(JSONReadingOptions: .mutableContainers)
+    
+    //Send a request to google to authenticate the token received from the app
+    let response = Just.post("https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + googleid!)
+    if(response.ok) {
+        //If google responds with 200 OK, extract json as dictionary
+        var dict = response.json.extract() as! Dictionary<String, Any?>
+        //Create credentials variable as UserData object
+        var u: User = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: dict["sub"]! as! String, signupdate: date!, tokenexpiry: dict["exp"]! as! String)
+            //First try register
+            do {
+                try _ = User.register(credentials: u)
+            } catch _ {
+        //If user exists, we will continue to login
+            }
+            do {
+//                print("login")
+//                print(creds.token)
+                try _ = User.authenticate(credentials: u)
+                return try JSON(node: [
+                    "success": true
+                    ])
+            } catch _ {
+                print("catch")
+                throw Abort.custom(status: .badRequest, message: "invalid google id")
+            }
+    
+    }
+    
 
-    var u = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: googleid!, signupdate: date!)
-    try u.save()
+// This return will never happen, but Xcode wants it so Xcode is happy :)
     return "ok"
    
 
