@@ -22,14 +22,14 @@ final class User: Model, Credentials {
     var signupdate: Double
     var tokenexpiry: Double
     
-    init(fname: String, lname: String, email: String, age: Int, host: Bool, googleid: String, signupdate: Double, tokenexpiry: String) {
+    init(fname: String, lname: String, email: String, age: Int, host: Bool, googleid: Double, signupdate: Double, tokenexpiry: String) {
         self.id = nil
         self.fname = fname
         self.lname = lname
         self.email = email
         self.age = age
         self.host = host
-        self.googleid = Double(googleid)!
+        self.googleid = googleid
         self.signupdate = signupdate
         self.tokenexpiry = Double(tokenexpiry)!
     }
@@ -117,6 +117,8 @@ extension User: Auth.User {
     }
     
 }
+
+
 
 
 

@@ -5,12 +5,11 @@ import Auth
 import HTTP
 
 
-
-
 let socket = Droplet(
     preparations: [User.self, Message.self],
     providers: [VaporPostgreSQL.Provider.self]
 )
+
 
 
 socket.post("register") {
@@ -29,8 +28,9 @@ socket.post("register") {
     //Send a request to google to authenticate the token received from the app
     var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + String(googleid!)
     let res = try socket.client.post(str)
-    var sub = res.json?["sub"]?.string!
+    var sub = res.json?["sub"]?.double!
     var exp = res.json?["exp"]?.string!
+    
     
     
     if(res.status.statusCode == 200) {
@@ -46,7 +46,7 @@ socket.post("register") {
             do {
 //                print("login")
 //                print(creds.token)
-                try _ = User.authenticate(credentials: u)
+                try _ = request.auth.login(u)
                 return try JSON(node: [
                     "success": true
                     ])
@@ -62,46 +62,80 @@ socket.post("register") {
     return "ok"
 
 }
+socket.get("get-message") {
+    request in
+    let time = request.data["time"]?.double!
+    let gid = request.data["gid"]?.string!
+    let cid = request.data["cid"]?.string!
+    var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token" + gid!
+    var sub: String  = ""
+    let res = try socket.client.post(str)
+    if res.status.statusCode == 200 {
+        sub = (res.json?["sub"]?.string!)!
+        if try User.query().filter("googleid", sub).first() != nil {
+            return try JSON(node: Message.query().filter("date", .greaterThan, time!).filter("chat", cid!).all().makeNode())
+        }
+    }
+    return "ok"
+    
+}
 
 socket.post("message") {
     request in
     let msg = request.data["msg"]?.string!
-    let date = request.data["date"]?.string!
-    let id = request.data["id"]?.int!
+    let date = request.data["date"]?.double!
+    let gid = request.data["gid"]?.string!
     let chat = request.data["chat"]?.string!
-    var m = Message(contents: msg!, owner: id!, date: date!, chat: chat!)
-    try m.save()
-    return try JSON(node: Message.all().makeNode())
-    
+    var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + gid!
+    let res = try socket.client.post(str)
+    var sub: Double = 0
+    if res.status.statusCode == 200 {
+        print("hi")
+        sub = (res.json?["sub"]?.double!)!
+        print(sub)
+        print(try User.query().filter("googleid", sub).first())
+        if try User.query().filter("googleid", sub).first() != nil {
+            print("123")
+            var m = Message(contents: msg!, owner: sub, date: date!, chat: chat!)
+            try m.save()
+            return try JSON(node: [
+                    "sucesss": true
+                ])
+        }
+    }
+    throw Abort.custom(status: .badRequest, message: "User does not exist in db. Unable to send message.")
 }
+    
 // chat functions here
-let chat = Chat()
+//let chat = Chat()
+//
+//
+//socket.socket("ws") { req, ws in
+//    var name: String? = nil
+//    
+//    ws.onText = {
+//        ws, text in
+//        let js = try JSON(bytes: Array(text.utf8))
+//        if let u = js.object?["username"]?.string {
+//            name = u
+//            chat.conns[u] = ws
+//            try chat.bot("\(u) has joined")
+//        }
+//        if let u = name, let m = js.object?["message"]?.string {
+//            try chat.send(name: u, message: m)
+//        }
+//    }
+//    ws.onClose = {
+//        ws, _, _, _ in
+//        guard let u = name else {
+//            return
+//        }
+//        try chat.bot("\(u) has left")
+//        chat.conns.removeValue(forKey: u)
+//    }
+//}
 
-
-socket.socket("ws") { req, ws in
-    var name: String? = nil
-    
-    ws.onText = {
-        ws, text in
-        let js = try JSON(bytes: Array(text.utf8))
-        if let u = js.object?["username"]?.string {
-            name = u
-            chat.conns[u] = ws
-            try chat.bot("\(u) has joined")
-        }
-        if let u = name, let m = js.object?["message"]?.string {
-            try chat.send(name: u, message: m)
-        }
-    }
-    ws.onClose = {
-        ws, _, _, _ in
-        guard let u = name else {
-            return
-        }
-        try chat.bot("\(u) has left")
-        chat.conns.removeValue(forKey: u)
-    }
-}
 
 
 socket.run()
+
