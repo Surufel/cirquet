@@ -7,11 +7,11 @@ final class Message: Model {
     var exists: Bool = false
     
     var contents: String
-    var owner: Double
+    var owner: String
     var date: Double
     var chat: String
     
-    init(contents: String, owner: Double, date: Double, chat: String) {
+    init(contents: String, owner: String, date: Double, chat: String) {
         self.id = nil
         self.contents = contents
         self.owner = owner
@@ -39,7 +39,7 @@ final class Message: Model {
             messages in
             messages.id()
             messages.string("contents")
-            messages.double("owner")
+            messages.string("owner")
             messages.double("date")
             messages.string("chat")
         })

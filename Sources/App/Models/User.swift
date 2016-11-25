@@ -21,8 +21,9 @@ final class User: Model, Credentials {
     var googleid: Double
     var signupdate: Double
     var tokenexpiry: Double
+    var hashedid: String
     
-    init(fname: String, lname: String, email: String, age: Int, host: Bool, googleid: Double, signupdate: Double, tokenexpiry: String) {
+    init(fname: String, lname: String, email: String, age: Int, host: Bool, googleid: Double, signupdate: Double, tokenexpiry: String, hashedid: String) {
         self.id = nil
         self.fname = fname
         self.lname = lname
@@ -32,6 +33,7 @@ final class User: Model, Credentials {
         self.googleid = googleid
         self.signupdate = signupdate
         self.tokenexpiry = Double(tokenexpiry)!
+        self.hashedid = hashedid
     }
     
     init(node: Node, in context: Context) throws {
@@ -44,6 +46,7 @@ final class User: Model, Credentials {
         self.googleid = try node.extract("googleid")
         self.signupdate = try node.extract("signupdate")
         self.tokenexpiry = try node.extract("tokenexpiry")
+        self.hashedid = try node.extract("hashedid")
     }
     
     func makeNode(context: Context) throws -> Node {
@@ -56,7 +59,8 @@ final class User: Model, Credentials {
             "host": self.host,
             "googleid": self.googleid,
             "signupdate": self.signupdate,
-            "tokenexpiry": self.tokenexpiry
+            "tokenexpiry": self.tokenexpiry,
+            "hashedid": self.hashedid
             ])
     }
     
@@ -72,6 +76,7 @@ final class User: Model, Credentials {
             users.double("googleid")
             users.double("signupdate")
             users.double("tokenexpiry")
+            users.string("hashedid")
         }
     }
     

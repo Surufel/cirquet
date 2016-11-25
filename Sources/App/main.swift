@@ -30,13 +30,15 @@ socket.post("register") {
     let res = try socket.client.post(str)
     var sub = res.json?["sub"]?.double!
     var exp = res.json?["exp"]?.string!
+    var hu = try socket.hash.make(String(sub!))
+    
     
     
     
     if(res.status.statusCode == 200) {
         //If google responds with 200 OK, extract json as dictionary
                 //Create credentials variable as UserData object
-        var u: User = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: sub!, signupdate: date!, tokenexpiry: exp!)
+        var u: User = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: sub!, signupdate: date!, tokenexpiry: exp!, hashedid: hu)
             //First try register
             do {
                 try _ = User.register(credentials: u)
@@ -65,7 +67,7 @@ socket.post("register") {
 socket.get("get-message") {
     request in
     let time = request.data["time"]?.double!
-    let gid = request.data["gid"]?.string!
+    let gid = request.data["id"]?.string!
     let cid = request.data["cid"]?.string!
     var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token" + gid!
     var sub: String  = ""
@@ -84,8 +86,26 @@ socket.post("message") {
     request in
     let msg = request.data["msg"]?.string!
     let date = request.data["date"]?.double!
-    let gid = request.data["gid"]?.string!
+    let id = request.data["id"]?.string!
     let chat = request.data["chat"]?.string!
+    let u = try User.query().filter("id", id!).first()
+    var m = Message(contents: msg!, owner: id!, date: date!, chat: chat!)
+    try m.save()
+    if m.exists {
+    return try JSON(node: [
+        "success": true
+        ])
+    }
+    
+
+    throw Abort.custom(status: .badRequest, message: "User does not exist in db. Unable to send message.")
+}
+
+socket.post("get-id") {
+    request in
+    
+    let gid = request.data["gid"]?.string!
+
     var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + gid!
     let res = try socket.client.post(str)
     var sub: Double = 0
@@ -93,19 +113,17 @@ socket.post("message") {
         print("hi")
         sub = (res.json?["sub"]?.double!)!
         print(sub)
+        var u: User? = try User.query().filter("googleid", sub).first()
         print(try User.query().filter("googleid", sub).first())
-        if try User.query().filter("googleid", sub).first() != nil {
-            print("123")
-            var m = Message(contents: msg!, owner: sub, date: date!, chat: chat!)
-            try m.save()
-            return try JSON(node: [
-                    "sucesss": true
-                ])
+        if u != nil {
+            
+            return (u?.hashedid)!
+            
         }
     }
-    throw Abort.custom(status: .badRequest, message: "User does not exist in db. Unable to send message.")
+    throw Abort.custom(status: .badRequest, message: "User does not exist in db. Unable to get id.")
 }
-    
+
 // chat functions here
 //let chat = Chat()
 //
