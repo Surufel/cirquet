@@ -46,7 +46,7 @@ socket.post("register") {
             do {
 //                print("login")
 //                print(creds.token)
-                try _ = request.auth.login(u)
+                try _ = User.authenticate(credentials: u)
                 return try JSON(node: [
                     "success": true
                     ])
