@@ -85,20 +85,24 @@ socket.get("get-message") {
 socket.post("message") {
     request in
     let msg = request.data["msg"]?.string!
-    let date = request.data["date"]?.double!
+    let date = request.data["date"]?.string!
     let id = request.data["id"]?.string!
     let chat = request.data["chat"]?.string!
-    let u = try User.query().filter("id", id!).first()
-    var m = Message(contents: msg!, owner: id!, date: date!, chat: chat!)
-    try m.save()
-    if m.exists {
-    return try JSON(node: [
-        "success": true
-        ])
-    }
     
+    var m = Message(contents: msg!, owner: id!, date: Double(date!)!, chat: chat!)
+    //print(try m.makeNode())
+    try m.save()
+    //print(m.exists)
+    if m.exists {
+        return try JSON(node: [
+            "success": true
+            ])
+    }
+    else {
+        throw Abort.custom(status: .badRequest, message: "User does not exist in db. Unable to send message.")
+    }
 
-    throw Abort.custom(status: .badRequest, message: "User does not exist in db. Unable to send message.")
+    
 }
 
 socket.post("get-id") {
@@ -124,34 +128,7 @@ socket.post("get-id") {
     throw Abort.custom(status: .badRequest, message: "User does not exist in db. Unable to get id.")
 }
 
-// chat functions here
-//let chat = Chat()
-//
-//
-//socket.socket("ws") { req, ws in
-//    var name: String? = nil
-//    
-//    ws.onText = {
-//        ws, text in
-//        let js = try JSON(bytes: Array(text.utf8))
-//        if let u = js.object?["username"]?.string {
-//            name = u
-//            chat.conns[u] = ws
-//            try chat.bot("\(u) has joined")
-//        }
-//        if let u = name, let m = js.object?["message"]?.string {
-//            try chat.send(name: u, message: m)
-//        }
-//    }
-//    ws.onClose = {
-//        ws, _, _, _ in
-//        guard let u = name else {
-//            return
-//        }
-//        try chat.bot("\(u) has left")
-//        chat.conns.removeValue(forKey: u)
-//    }
-//}
+
 
 
 

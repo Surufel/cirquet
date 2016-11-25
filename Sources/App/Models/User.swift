@@ -117,7 +117,12 @@ extension User: Auth.User {
             print("register")
             var us = credentials as! User //Casting credentials back to User class since User conforms to Credentials protocol
             try us.save() //save user to db
-            return us // return user
+            if us.exists {
+                return us
+            }
+            else {
+                throw Abort.custom(status: .badRequest, message: "Unable to save user")
+            }
         }
     }
     
