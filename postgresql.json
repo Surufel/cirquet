@@ -1,0 +1,7 @@
+{
+	"host": "pdc-amd01.poly.edu",
+	"user": "kb1892",
+	"password": "ceano8cj",
+	"database": "kb1892",
+	"port": 5432
+}
