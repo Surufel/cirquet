@@ -64,22 +64,33 @@ socket.post("register") {
     return "ok"
 
 }
-socket.get("get-message") {
+socket.post("get-message") {
     request in
     let time = request.data["time"]?.double!
     let gid = request.data["id"]?.string!
     let cid = request.data["cid"]?.string!
-    var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token" + gid!
-    var sub: String  = ""
-    let res = try socket.client.post(str)
-    if res.status.statusCode == 200 {
-        sub = (res.json?["sub"]?.string!)!
-        if try User.query().filter("googleid", sub).first() != nil {
-            return try JSON(node: Message.query().filter("date", .greaterThan, time!).filter("chat", cid!).all().makeNode())
+    if try User.query().filter("hashedid", gid!).first() != nil {
+        if let x: JSON? = try JSON(node: Message.query().filter("date", .greaterThan, time!).filter("chat", cid!).all().makeNode()) {
+            return x!
+        }
+        else {
+            return "no messages"
         }
     }
+    
     return "ok"
     
+}
+
+socket.post("last5") {
+    req in
+    let cid = req.data["cid"]?.string!
+    if let x: [Message]? = try Message.query().filter("date", .greaterThan, Date().timeIntervalSince1970-300).filter("chat", cid!).all() {
+        return try JSON((x?.makeNode())!)
+    }
+    else {
+        return "no new messages"
+    }
 }
 
 socket.post("message") {
