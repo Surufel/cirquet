@@ -6,7 +6,7 @@ import HTTP
 
 
 let socket = Droplet(
-    preparations: [User.self, Message.self],
+    preparations: [User.self, Message.self, Venue.self],
     providers: [VaporPostgreSQL.Provider.self]
 )
 
@@ -100,7 +100,7 @@ socket.post("message") {
     let id = request.data["id"]?.string!
     let chat = request.data["chat"]?.string!
     
-    var m = Message(contents: msg!, owner: id!, date: Double(date!)!, chat: chat!)
+    var m = Message(contents: msg!.truncated(to: 255), owner: id!, date: Double(date!)!, chat: chat!)
     //print(try m.makeNode())
     try m.save()
     //print(m.exists)
