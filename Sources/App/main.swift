@@ -50,7 +50,7 @@ socket.post("register") {
 //                print(creds.token)
                 try _ = User.authenticate(credentials: u)
                 return try JSON(node: [
-                    "success": true
+                    "is_host": u.host
                     ])
             } catch _ {
                 print("catch")
@@ -80,6 +80,17 @@ socket.post("get-message") {
     
     return "ok"
     
+}
+
+socket.post("get-chat") {
+    request in
+    let cid = request.data["cid"]?.string!
+    if let x: Venue? = try Venue.query().filter("chatid", cid!).first() {
+        return x!.chatname
+    }
+    else {
+        throw Abort.custom(status: .badRequest, message: "Invalid chat code")
+    }
 }
 
 socket.post("last5") {
