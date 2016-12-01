@@ -3,68 +3,113 @@ import Vapor
 import VaporPostgreSQL
 import Auth
 import HTTP
+import Turnstile
+import TurnstileCrypto
+import TurnstileWeb
 
+extension Request {
+    var baseUrl: String? {
+        guard let host = headers["Host"]?.finished(with: "/") else { return nil }
+        return "\(uri.scheme)://\(host)"
+    }
+}
 
-let socket = Droplet(
+let auth = AuthMiddleware(user: User.self)
+
+let drop = Droplet(
     preparations: [User.self, Message.self, Venue.self],
     providers: [VaporPostgreSQL.Provider.self]
 )
 
+drop.middleware.append(auth)
 
-
-socket.post("register") {
-    request in
-    //Pull in data from the request sent from the app
-    let fname = request.data["fname"]?.string!
-    let lname = request.data["lname"]?.string!
-    let email = request.data["email"]?.string!
-    let age = request.data["age"]?.int!
-    let host = request.data["host"]?.bool!
-    let googleid = request.data["googleid"]?.string!
-    let date = Double((request.data["date"]?.string!)!)
-    
-
-    
-    //Send a request to google to authenticate the token received from the app
-    var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + String(googleid!)
-    let res = try socket.client.post(str)
-    var sub = res.json?["sub"]?.double!
-    var exp = res.json?["exp"]?.string!
-    var hu = try socket.hash.make(String(sub!))
-    
-    
-    
-    
-    if(res.status.statusCode == 200) {
-        //If google responds with 200 OK, extract json as dictionary
-                //Create credentials variable as UserData object
-        var u: User = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: sub!, signupdate: date!, tokenexpiry: exp!, hashedid: hu)
-            //First try register
-            do {
-                try _ = User.register(credentials: u)
-            } catch _ {
-        //If user exists, we will continue to login
-            }
-            do {
-//                print("login")
-//                print(creds.token)
-                try _ = User.authenticate(credentials: u)
-                return try JSON(node: [
-                    "is_host": u.host
-                    ])
-            } catch _ {
-                print("catch")
-                throw Abort.custom(status: .badRequest, message: "invalid google id")
-            }
-    
+if let clientID = drop.config["app", "googleClientID"]?.string, let clientSecret = drop.config["app", "googleClientSecret"]?.string {
+    let g = Google(clientID: clientID, clientSecret: clientSecret)
+    drop.get("login", "google") {
+        req in
+        let st = URandom().secureToken
+        //req.
+        let resp = Response(redirect: g.getLoginLink(redirectURL: req.baseUrl! + "/login/google/consumer", state: st).absoluteString)
+        resp.cookies["OAuthState"] = st
+        return resp
     }
-    
-
-// This return will never happen, but Xcode wants it so Xcode is happy :)
-    return "ok"
-
+    drop.get("login", "google", "consumer") {
+        request in
+        let fname = request.data["fname"]?.string!
+        let lname = request.data["lname"]?.string!
+        let email = request.data["email"]?.string!
+        let age = request.data["age"]?.int!
+        let host = request.data["host"]?.bool!
+        let googleid = request.data["googleid"]?.string!
+        let date = Double((request.data["date"]?.string!)!)
+        guard let st = request.cookies["OAuthState"] else {
+            return Response(redirect: "/login")
+        }
+        let acc = try g.authenticate(authorizationCodeCallbackURL: request.uri.description, state: st)
+        var arr = [acc, fname, lname, email, age, host, googleid, date] as [Any]
+        
+        try request.auth.login((arr as! Credentials))
+        return Response(redirect: "/")
+    }
 }
-socket.post("get-message") {
+
+
+
+//socket.post("register") {
+//    request in
+//    //Pull in data from the request sent from the app
+//    let fname = request.data["fname"]?.string!
+//    let lname = request.data["lname"]?.string!
+//    let email = request.data["email"]?.string!
+//    let age = request.data["age"]?.int!
+//    let host = request.data["host"]?.bool!
+//    let googleid = request.data["googleid"]?.string!
+//    let date = Double((request.data["date"]?.string!)!)
+//    
+//
+//    
+//    //Send a request to google to authenticate the token received from the app
+//    var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + String(googleid!)
+//    let res = try socket.client.post(str)
+//    var sub = res.json?["sub"]?.double!
+//    var exp = res.json?["exp"]?.string!
+//    var hu = try socket.hash.make(String(sub!))
+//    
+//    
+//    
+//    
+//    if(res.status.statusCode == 200) {
+//        //If google responds with 200 OK, extract json as dictionary
+//                //Create credentials variable as UserData object
+//        var u: User = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: sub!, signupdate: date!, tokenexpiry: exp!, hashedid: hu)
+//            //First try register
+//            do {
+//                try _ = User.register(credentials: u)
+//            } catch _ {
+//        //If user exists, we will continue to login
+//            }
+//            do {
+////                print("login")
+////                print(creds.token)
+//                try _ = User.authenticate(credentials: u)
+//                return try JSON(node: [
+//                    "is_host": u.host
+//                    ])
+//            } catch _ {
+//                print("catch")
+//                throw Abort.custom(status: .badRequest, message: "invalid google id")
+//            }
+//    
+//    }
+
+//
+//
+//// This return will never happen, but Xcode wants it so Xcode is happy :)
+//    return "ok"
+//
+//}
+
+drop.post("get-message") {
     request in
     let time = request.data["time"]?.double!
     let gid = request.data["id"]?.string!
@@ -82,7 +127,7 @@ socket.post("get-message") {
     
 }
 
-socket.post("get-chat") {
+drop.post("get-chat") {
     request in
     let cid = request.data["cid"]?.string!
     if let x: Venue? = try Venue.query().filter("chatid", cid!).first() {
@@ -93,7 +138,7 @@ socket.post("get-chat") {
     }
 }
 
-socket.post("last5") {
+drop.post("last5") {
     req in
     let cid = req.data["cid"]?.string!
     if let x: [Message]? = try Message.query().filter("date", .greaterThan, Date().timeIntervalSince1970-300).filter("chat", cid!).all() {
@@ -104,7 +149,7 @@ socket.post("last5") {
     }
 }
 
-socket.post("message") {
+drop.post("message") {
     request in
     let msg = request.data["msg"]?.string!
     let date = request.data["date"]?.string!
@@ -127,13 +172,13 @@ socket.post("message") {
     
 }
 
-socket.post("get-id") {
+drop.post("get-id") {
     request in
     
     let gid = request.data["gid"]?.string!
 
     var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + gid!
-    let res = try socket.client.post(str)
+    let res = try drop.client.post(str)
     var sub: Double = 0
     if res.status.statusCode == 200 {
         print("hi")
@@ -154,5 +199,5 @@ socket.post("get-id") {
 
 
 
-socket.run()
+drop.run()
 

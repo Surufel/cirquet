@@ -9,6 +9,8 @@
 import Foundation
 import Vapor
 import Auth
+import Turnstile
+import TurnstileWeb
 
 final class User: Model, Credentials {
     var id: Node?
@@ -20,20 +22,24 @@ final class User: Model, Credentials {
     var host: Bool
     var googleid: Double
     var signupdate: Double
-    var tokenexpiry: Double
     var hashedid: String
     
-    init(fname: String, lname: String, email: String, age: Int, host: Bool, googleid: Double, signupdate: Double, tokenexpiry: String, hashedid: String) {
+    init(credentials: Credentials) throws {
         self.id = nil
-        self.fname = fname
-        self.lname = lname
-        self.email = email
-        self.age = age
-        self.host = host
-        self.googleid = googleid
-        self.signupdate = signupdate
-        self.tokenexpiry = Double(tokenexpiry)!
-        self.hashedid = hashedid
+        switch credentials{
+            case let credentials as Array<Any>:
+                self.fname = credentials[1] as! String
+                self.lname = credentials[2] as! String
+                self.email = credentials[3] as! String
+                self.age = credentials[4] as! Int
+                self.host = credentials[5] as! Bool
+                self.googleid = Double((credentials[0] as! GoogleAccount).uniqueID)!
+                self.signupdate = credentials[6] as! Double
+                self.hashedid = try Droplet().hash.make((credentials[0] as! GoogleAccount).uniqueID)
+            
+            default:
+                throw UnsupportedCredentialsError()
+        }
     }
     
     init(node: Node, in context: Context) throws {
@@ -45,7 +51,6 @@ final class User: Model, Credentials {
         self.host = try node.extract("host")
         self.googleid = try node.extract("googleid")
         self.signupdate = try node.extract("signupdate")
-        self.tokenexpiry = try node.extract("tokenexpiry")
         self.hashedid = try node.extract("hashedid")
     }
     
@@ -59,7 +64,6 @@ final class User: Model, Credentials {
             "host": self.host,
             "googleid": self.googleid,
             "signupdate": self.signupdate,
-            "tokenexpiry": self.tokenexpiry,
             "hashedid": self.hashedid
             ])
     }
@@ -75,7 +79,6 @@ final class User: Model, Credentials {
             users.bool("host")
             users.double("googleid")
             users.double("signupdate")
-            users.double("tokenexpiry")
             users.string("hashedid")
         }
     }
@@ -87,46 +90,105 @@ final class User: Model, Credentials {
 }
 
 extension User: Auth.User {
-    static func authenticate (credentials: Credentials) throws -> Auth.User {
+    static func authenticate(credentials: Credentials) throws -> Auth.User {
+        var u: User
         
-        //Check db if user exists
-        let user = try User.query().filter("googleid", (credentials as! User).googleid).first()
-        
-        if user != nil {
-            // If y != nil we will return user
-            return user!
-        }
-        
-        else {
-            throw Abort.custom(status: .badRequest, message: "User does not exist")
-        }
-
+        switch credentials {
+        case let credentials as Array<Any>:
+            var g = credentials[0]
+            switch g {
+            case let g as GoogleAccount:
+                if let us = try User.query().filter("googleid", g.uniqueID).first() {
+                    u = us;
+                }
+                else {
+                    u = try User.register(credentials: credentials as! Credentials) as! User
+                    //return u
+                }
+            default:
+                throw IncorrectCredentialsError()
+                
+            }
+            default:
+                throw UnsupportedCredentialsError()
     }
-    
-    static func register (credentials: Credentials) throws -> Auth.User {
-        
-        // Check db if user exists
-        let user = try User.query().filter("googleid", (credentials as! User).googleid).first()
-        if user != nil {
-            // If user exists, throw abort & main .swift will continue to try to login
-            print("user already exists")
-            throw Abort.custom(status: .badRequest, message: "User already exists")
             
+            
+        
+        if u.exists {
+            return u
+        } else {
+            throw IncorrectCredentialsError()
         }
-        else {
-            print("register")
-            var us = credentials as! User //Casting credentials back to User class since User conforms to Credentials protocol
-            try us.save() //save user to db
-            if us.exists {
-                return us
-            }
-            else {
-                throw Abort.custom(status: .badRequest, message: "Unable to save user")
-            }
-        }
+        
     }
-    
+    static func register(credentials: Credentials) throws -> Auth.User {
+        var nu: User
+        switch credentials {
+        case let credentials as Array<Any>:
+            let gacc = credentials[0]
+            switch gacc {
+            case let gacc as GoogleAccount:
+                if try User.query().filter("googleid", gacc.uniqueID).first() == nil {
+                    nu = try User(credentials: credentials as! Credentials)
+                    try nu.save()
+                    return nu
+                    
+            }
+            default:
+                throw AccountTakenError()
+            }
+        default:
+            throw IncorrectCredentialsError()
+        }
+        
+        
+    }
 }
+
+//extension User: Auth.User {
+//    static func authenticate (credentials: Credentials) throws -> Auth.User {
+//
+//        //Check db if user exists
+//        let user = try User.query().filter("googleid", (credentials as! User).googleid).first()
+//        
+//        if user != nil {
+//            // If y != nil we will return user
+//            return user!
+//        }
+//        
+//        else {
+//            throw Abort.custom(status: .badRequest, message: "User does not exist")
+//        }
+//
+//    }
+//    
+//    static func register (credentials: Credentials) throws -> Auth.User {
+//        
+//        // Check db if user exists
+//        let user = try User.query().filter("googleid", (credentials as! User).googleid).first()
+//        if user != nil {
+//            // If user exists, throw abort & main .swift will continue to try to login
+//            print("user already exists")
+//            throw Abort.custom(status: .badRequest, message: "User already exists")
+//            
+//        }
+//        else {
+//            print("register")
+//            var us = credentials as! User //Casting credentials back to User class since User conforms to Credentials protocol
+//            try us.save() //save user to db
+//            if us.exists {
+//                return us
+//            }
+//            else {
+//                throw Abort.custom(status: .badRequest, message: "Unable to save user")
+//            }
+//        }
+//    }
+//    
+//}
+
+
 
 
 
