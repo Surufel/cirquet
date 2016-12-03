@@ -86,47 +86,47 @@ final class User: Model, Credentials {
     
 }
 
-extension User: Auth.User {
-    static func authenticate (credentials: Credentials) throws -> Auth.User {
-        
-        //Check db if user exists
-        let user = try User.query().filter("googleid", (credentials as! User).googleid).first()
-        
-        if user != nil {
-            // If y != nil we will return user
-            return user!
-        }
-        
-        else {
-            throw Abort.custom(status: .badRequest, message: "User does not exist")
-        }
-
-    }
-    
-    static func register (credentials: Credentials) throws -> Auth.User {
-        
-        // Check db if user exists
-        let user = try User.query().filter("googleid", (credentials as! User).googleid).first()
-        if user != nil {
-            // If user exists, throw abort & main .swift will continue to try to login
-            print("user already exists")
-            throw Abort.custom(status: .badRequest, message: "User already exists")
-            
-        }
-        else {
-            print("register")
-            var us = credentials as! User //Casting credentials back to User class since User conforms to Credentials protocol
-            try us.save() //save user to db
-            if us.exists {
-                return us
-            }
-            else {
-                throw Abort.custom(status: .badRequest, message: "Unable to save user")
-            }
-        }
-    }
-    
-}
+//extension User: Auth.User {
+//    static func authenticate (credentials: Credentials) throws -> Auth.User {
+//        
+//        //Check db if user exists
+//        let user = try User.query().filter("googleid", (credentials as! User).googleid).first()
+//        
+//        if user != nil {
+//            // If y != nil we will return user
+//            return user!
+//        }
+//        
+//        else {
+//            throw Abort.custom(status: .badRequest, message: "User does not exist")
+//        }
+//
+//    }
+//    
+//    static func register (credentials: Credentials) throws -> Auth.User {
+//        
+//        // Check db if user exists
+//        let user = try User.query().filter("googleid", (credentials as! User).googleid).first()
+//        if user != nil {
+//            // If user exists, throw abort & main .swift will continue to try to login
+//            print("user already exists")
+//            throw Abort.custom(status: .badRequest, message: "User already exists")
+//            
+//        }
+//        else {
+//            print("register")
+//            var us = credentials as! User //Casting credentials back to User class since User conforms to Credentials protocol
+//            try us.save() //save user to db
+//            if us.exists {
+//                return us
+//            }
+//            else {
+//                throw Abort.custom(status: .badRequest, message: "Unable to save user")
+//            }
+//        }
+//    }
+//    
+//}
 
 
 

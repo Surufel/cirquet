@@ -10,6 +10,33 @@ let socket = Droplet(
     providers: [VaporPostgreSQL.Provider.self]
 )
 
+socket.post("login") {
+    request in
+    let googleid = request.data["googleid"]?.string!
+    var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + String(googleid!)
+    let res = try socket.client.post(str)
+    var sub = res.json?["sub"]?.double!
+    if res.status.statusCode == 200 {
+        let u = try User.query().filter("googleid", sub!).first()
+        if u != nil {
+            return try JSON(
+                node: [
+                    "is_host": u!.host,
+                    "sender_name": u?.fname,
+                    "sender_id": u!.hashedid,
+                    "exists": true
+                ]
+            )
+        }
+        return try JSON(node: [
+            "exists": false
+            ])
+    }
+    
+    throw Abort.custom(status: .badRequest, message: "Invalid google token")
+    
+}
+
 
 
 socket.post("register") {
@@ -21,7 +48,8 @@ socket.post("register") {
     let age = request.data["age"]?.int!
     let host = request.data["host"]?.bool!
     let googleid = request.data["googleid"]?.string!
-    let date = Double((request.data["date"]?.string!)!)
+    //let date = Double((request.data["date"]?.string!)!)
+    print(request.data["date"]?.double)
     
 
     
@@ -29,7 +57,6 @@ socket.post("register") {
     var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + String(googleid!)
     let res = try socket.client.post(str)
     var sub = res.json?["sub"]?.double!
-    var exp = res.json?["exp"]?.string!
     var hu = try socket.hash.make(String(sub!))
     
     
@@ -38,30 +65,29 @@ socket.post("register") {
     if(res.status.statusCode == 200) {
         //If google responds with 200 OK, extract json as dictionary
                 //Create credentials variable as UserData object
-        var u: User = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: sub!, signupdate: date!, tokenexpiry: exp!, hashedid: hu)
-            //First try register
-            do {
-                try _ = User.register(credentials: u)
-            } catch _ {
-        //If user exists, we will continue to login
-            }
-            do {
-//                print("login")
-//                print(creds.token)
-                try _ = User.authenticate(credentials: u)
-                return try JSON(node: [
-                    "is_host": u.host
-                    ])
-            } catch _ {
-                print("catch")
-                throw Abort.custom(status: .badRequest, message: "invalid google id")
-            }
-    
+        
+        if (try User.query().filter("googleid", sub!).first()) != nil {
+            throw Abort.custom(status: .badRequest, message: "User already exists in db, try logging in instead.")
+        }
+        else {
+            var u: User = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: sub!, signupdate: 4434234, tokenexpiry: "99999", hashedid: hu)
+            try u.save()
+            var x = try JSON(node: [
+                "is_host": u.host,
+                "sender_name": u.fname,
+                "sender_id": u.hashedid,
+                "exists": true
+                ])
+            print(x)
+            return x
+        }
+        
     }
     
 
 // This return will never happen, but Xcode wants it so Xcode is happy :)
-    return "ok"
+    throw Abort.custom(status: .badRequest, message: "Invalid google credentials sent to server")
+
 
 }
 socket.post("get-message") {
