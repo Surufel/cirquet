@@ -3,7 +3,7 @@ import Vapor
 import VaporPostgreSQL
 import Auth
 import HTTP
-
+import SwiftyJSON
 
 let socket = Droplet(
     preparations: [User.self, Message.self, Venue.self],
@@ -174,6 +174,57 @@ socket.post("get-id") {
         }
     }
     throw Abort.custom(status: .badRequest, message: "User does not exist in db. Unable to get id.")
+}
+
+socket.post("create-venue") {
+    request in
+    let hashedid = request.data["id"]?.string!
+    let address = request.data["addr"]?.string!
+    let city = request.data["city"]?.string!
+    let state = request.data["state"]?.string!
+    let zip = request.data["zip"]?.int!
+    let chatname = request.data["chatname"]?.string!
+    let venuename = request.data["venuename"]?.string!
+    
+    if try User.query().filter("hashedid", hashedid!).first() != nil {
+        guard (try User.query().filter("hashedid", hashedid!).first()?.host)! else {
+            throw Abort.custom(status: .badRequest, message: "User is not a host, they cannot create a venue.")
+        }
+        
+        let resp = try socket.client.post("https://maps.googleapis.com/maps/api/geocode/json?address=\(address!),+\(city!),+\(state!)&key=AIzaSyCorcKHb0-E5j_DoJkqwyhS9wZXlWKw-JI")
+        var js = SwiftyJSON(data: Data(bytes: resp.body.bytes!))
+        //print()
+        let lat: String = String(js["results"][0]["geometry"]["location"]["lat"].double!)
+        let lng: String = String(js["results"][0]["geometry"]["location"]["lng"].double!)
+        let chatid: String = try socket.hash.make(lat + lng + chatname!)
+        
+        var v = Venue(host: hashedid!, latitude: Double(lat)!, longitude: Double(lng)!, name: venuename!, address: address!, city: city!, state: state!, zip: zip!, chatname: chatname!, chatid: chatid)
+    
+
+        guard (try Venue.query().filter("chatid", chatid).first() == nil) else {
+            throw Abort.custom(status: .badRequest, message: "Venue already exists")
+        }
+        try v.save()
+        if v.exists {
+            return try JSON(node: [
+                "success": true,
+                "chatname": v.chatname,
+                "chatid": v.chatid
+                ])
+        }
+        else {
+            //throw Abort.custom(status: .badRequest, message: "Unable to save venue to db, \()")
+        }
+        
+    }
+
+    
+    // To get latitude from google results: js["results"][0]["geometry"]["location"]["lat"].double!
+    // Too get longitude from google results: js["results"][0]["geometry"]["location"]["lng"].double!
+    //print()
+    
+   
+    throw Abort.custom(status: .badRequest, message: "Invalid data to create venue")
 }
 
 
