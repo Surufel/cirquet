@@ -3,6 +3,7 @@ import Vapor
 import VaporPostgreSQL
 import Auth
 import HTTP
+
 import SwiftyJSON
 
 let socket = Droplet(
@@ -19,7 +20,7 @@ socket.post("login") {
     if res.status.statusCode == 200 {
         let u = try User.query().filter("googleid", sub!).first()
         if u != nil {
-            return try JSON(
+            return try Vapor.JSON(
                 node: [
                     "is_host": u!.host,
                     "sender_name": u?.fname,
@@ -28,7 +29,7 @@ socket.post("login") {
                 ]
             )
         }
-        return try JSON(node: [
+        return try Vapor.JSON(node: [
             "exists": false
             ])
     }
@@ -72,7 +73,7 @@ socket.post("register") {
         else {
             var u: User = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: sub!, signupdate: 4434234, tokenexpiry: "99999", hashedid: hu)
             try u.save()
-            var x = try JSON(node: [
+            var x = try Vapor.JSON(node: [
                 "is_host": u.host,
                 "sender_name": u.fname,
                 "sender_id": u.hashedid,
@@ -96,13 +97,14 @@ socket.post("get-message") {
     let gid = request.data["id"]?.string!
     let cid = request.data["cid"]?.string!
     if try User.query().filter("hashedid", gid!).first() != nil {
-        if let x: JSON? = try JSON(node: Message.query().filter("date", .greaterThan, time!).filter("chat", cid!).all().makeNode()) {
+        if let x: Vapor.JSON? = try JSON(node: Message.query().filter("date", .greaterThan, time!).filter("chat", cid!).all().makeNode()) {
             return x!
         }
         else {
             return "no messages"
         }
     }
+   
     
     return "ok"
     
@@ -123,7 +125,7 @@ socket.post("last5") {
     req in
     let cid = req.data["cid"]?.string!
     if let x: [Message]? = try Message.query().filter("date", .greaterThan, Date().timeIntervalSince1970-300).filter("chat", cid!).all() {
-        return try JSON((x?.makeNode())!)
+        return try Vapor.JSON((x?.makeNode())!)
     }
     else {
         return "no new messages"
@@ -142,7 +144,7 @@ socket.post("message") {
     try m.save()
     //print(m.exists)
     if m.exists {
-        return try JSON(node: [
+        return try Vapor.JSON(node: [
             "success": true
             ])
     }
@@ -192,7 +194,7 @@ socket.post("create-venue") {
         }
         
         let resp = try socket.client.post("https://maps.googleapis.com/maps/api/geocode/json?address=\(address!),+\(city!),+\(state!)&key=AIzaSyCorcKHb0-E5j_DoJkqwyhS9wZXlWKw-JI")
-        var js = SwiftyJSON(data: Data(bytes: resp.body.bytes!))
+        var js = SwiftyJSON.JSON(data: Data(bytes: resp.body.bytes!))
         //print()
         let lat: String = String(js["results"][0]["geometry"]["location"]["lat"].double!)
         let lng: String = String(js["results"][0]["geometry"]["location"]["lng"].double!)
@@ -206,7 +208,7 @@ socket.post("create-venue") {
         }
         try v.save()
         if v.exists {
-            return try JSON(node: [
+            return try Vapor.JSON(node: [
                 "success": true,
                 "chatname": v.chatname,
                 "chatid": v.chatid
