@@ -92,6 +92,20 @@ socket.post("register") {
 
 
 }
+
+socket.post ("get-chat-id") {
+    request in
+    let v: Venue? = try Venue.query().filter("host", (request.data["id"]?.string!)!).first()
+    guard v != nil else {
+        throw Abort.custom(status: .badRequest, message: "Host does not own a venue.")
+    }
+    return try Vapor.JSON(node: [
+        "success": true,
+        "chatid": v?.chatid,
+        "chatname": v?.chatname
+        ]);
+    
+}
 socket.post("get-message") {
     request in
     let time = request.data["time"]?.double!
