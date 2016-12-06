@@ -49,7 +49,7 @@ socket.post("register") {
     let age = request.data["age"]?.int!
     let host = request.data["host"]?.bool!
     let googleid = request.data["googleid"]?.string!
-    //let date = Double((request.data["date"]?.string!)!)
+    let date = request.data["date"]?.double!
     print(request.data["date"]?.double)
     
 
@@ -58,6 +58,7 @@ socket.post("register") {
     var str: String = "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + String(googleid!)
     let res = try socket.client.post(str)
     var sub = res.json?["sub"]?.double!
+    var exp = res.json?["exp"]?.string!
     var hu = try socket.hash.make(String(sub!))
     
     
@@ -71,7 +72,7 @@ socket.post("register") {
             throw Abort.custom(status: .badRequest, message: "User already exists in db, try logging in instead.")
         }
         else {
-            var u: User = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: sub!, signupdate: 4434234, tokenexpiry: "99999", hashedid: hu)
+            var u: User = User(fname: fname!, lname: lname!, email: email!, age: age!, host: host!, googleid: sub!, signupdate: date!, tokenexpiry: exp!, hashedid: hu)
             try u.save()
             var x = try Vapor.JSON(node: [
                 "is_host": u.host,
