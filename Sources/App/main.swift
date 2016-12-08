@@ -151,10 +151,11 @@ socket.post("message") {
     request in
     let msg = request.data["msg"]?.string!
     let date = request.data["date"]?.string!
+    let name = request.data["name"]?.string!
     let id = request.data["id"]?.string!
     let chat = request.data["chat"]?.string!
     
-    var m = Message(contents: msg!.truncated(to: 255), owner: id!, date: Double(date!)!, chat: chat!)
+    var m = Message(contents: msg!.truncated(to: 255), owner: id!, name: name!, date: Double(date!)!, chat: chat!)
     //print(try m.makeNode())
     try m.save()
     //print(m.exists)

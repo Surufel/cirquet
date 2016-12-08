@@ -8,13 +8,15 @@ final class Message: Model {
     
     var contents: String
     var owner: String
+    var name: String
     var date: Double
     var chat: String
     
-    init(contents: String, owner: String, date: Double, chat: String) {
+    init(contents: String, owner: String, name: String, date: Double, chat: String) {
         self.id = nil
         self.contents = contents
         self.owner = owner
+        self.name = name
         self.date = date
         self.chat = chat
     }
@@ -22,6 +24,7 @@ final class Message: Model {
         self.id = try node.extract("id")
         self.contents = try node.extract("contents")
         self.owner = try node.extract("owner")
+        self.name = try node.extract("name")
         self.date = try node.extract("date")
         self.chat = try node.extract("chat")
     }
@@ -30,6 +33,7 @@ final class Message: Model {
             "id": self.id,
             "contents": self.contents,
             "owner": self.owner,
+            "name": self.name,
             "date": self.date,
             "chat": self.chat
             ])
@@ -40,6 +44,7 @@ final class Message: Model {
             messages.id()
             messages.string("contents")
             messages.string("owner")
+            messages.string("name")
             messages.double("date")
             messages.string("chat")
         })

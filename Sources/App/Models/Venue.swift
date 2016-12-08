@@ -74,7 +74,7 @@ final class Venue: Model {
     }
     
     static func revert(_ database: Database) throws {
-        try database.delete("users")
+        try database.delete("venues")
     }
     
     
